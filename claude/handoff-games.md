@@ -24,6 +24,9 @@
      * โหมดพิเศษ (`scr-modes`): พิธีกรรมประจำวัน (ทีมเช่า 3★ seed ตามวันที่ + 2 กฎจาก `DAILY_MODS` + เรลิกหายาก, A5, คะแนน) · Boss Rush 9 บอส (`RUSH`) · หอเกียรติยศ
      * บาลานซ์: dmgMul องก์ 2–3 = 1.35/1.7 (เดิม 1.45/1.9) · พักระหว่างองก์ฟื้น 35% · ผลบอต: ทีม R เริ่มต้น A0 ชนะ ~3/4, A10 ~1/3, Boss Rush ถึงบอส 8/9, Daily A5 ~1/3
      * จัดทีมอัตโนมัติ (`autoTeam`/`teamEval`/`orderTeam`): ค้นทุกชุด 4 ตัวจากฮีโร่ที่มี × 24 ลำดับตำแหน่ง · 4 แนวทาง สมดุล/พลังสูงสุด/ธาตุเดียว/ท่าไม้ตาย · มีเหตุผลประกอบ + เรียงตำแหน่งทีมเดิม · ปุ่มที่หน้าหลัก หน้าฮีโร่ และหน้าต่างเตรียมการไต่
+     * ภาพวาดฮีโร่ 24 ตัว (ผู้ใช้สร้างด้วย AI ภาพ): บัสต์ 3:4 382×512 + Character Sheet 1264×848 ฝังเป็น WebP ใน `const ART={p,s}` (สคริปต์แยกก่อนสคริปต์หลัก) · `heroSVG` คืน `<svg><image href=blob:...>` (แปลง base64 → blob URL ครั้งเดียวใน `artUrl`) จึงใช้ได้ทุกจอเดิม · ตั้งค่าสลับกลับเป็นภาพเวกเตอร์ได้ (`META.art`) · หน้าฮีโร่มี Character Sheet + lightbox ซูม · การ์ดฮีโร่ในสนามมีฟิลเตอร์สีตามสถานะ (อาการทางจิต/คุณธรรม/ประตูมรณะ)
+     * ไฟล์ภาพต้นฉบับ (WebP) อยู่ที่ `games/abyssal-ante/art/{portraits,sheets}` · UR 4 ตัวแรก (lilac, azazel, seraphine, aurelia) ไม่มีบัสต์จากผู้ใช้ → ตัดจากชีตด้วย `tools/urbust.py` · แพ็กด้วย `tools/build_art.py`
+     * ศัตรูยังเป็น SVG เวกเตอร์ (ยังไม่มีภาพวาด)
      * โค้ดใหม่ ABYSSTHRONE · patch notes แสดงครั้งเดียว (`META.seenV2`)
    * ต้นฉบับเก็บใน repo: `games/abyssal-ante/index.html` (ไม่มี skeleton — publish ตรงได้) · `tools/sim.js` (บอตเล่นทั้งการไต่: `node sim.js index.html <runs> starter <asc> <stars>`, env `MODE=rush|daily`, `THRONE=1`) · `tools/smoke.js` (ทดสอบทุกหน้าจอ + ภาพหน้าจอ)
 
