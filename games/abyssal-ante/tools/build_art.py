@@ -12,14 +12,15 @@ for hid in ORDER[:4]: P[hid]=Image.open(f'art/ur_{hid}.png').convert('RGB')
 # user-supplied replacement busts override the generated ones
 for f in glob.glob('in/new/*_bust.*'): P[os.path.basename(f).split('_')[0]]=Image.open(f).convert('RGB')
 # full-body figures (RGBA) cut from the sheets by fullbody.py
-F={hid:Image.open(f'art/full/{hid}.png').convert('RGBA') for hid in ORDER}
+import json
+SP={hid:open(f'art/sprites/{hid}.webp','rb').read() for hid in ORDER};SPM=json.load(open('art/sprites/meta.json'))
 for f in glob.glob('in/sh/sheets_png/*.png'):
     hid=os.path.basename(f).split('_',2)[2][:-4];im=Image.open(f).convert('RGB')
     S[hid]=im.resize((SW,round(im.height*SW/im.width)),Image.LANCZOS) if im.width>SW else im
 assert set(P)==set(ORDER)==set(S),(set(ORDER)-set(P),set(ORDER)-set(S))
 ps={k:uri(v.resize((382,512),Image.LANCZOS) if v.size!=(382,512) else v,QP) for k,v in P.items()}
 ss={k:uri(v,QS) for k,v in S.items()}
-fs={k:uri(v,QP) for k,v in F.items()}
-js='const ART={p:{'+','.join(f'{k}:"{ps[k]}"' for k in ORDER)+'},\n s:{'+','.join(f'{k}:"{ss[k]}"' for k in ORDER)+'},\n f:{'+','.join(f'{k}:"{fs[k]}"' for k in ORDER)+'}};\n'
+sps={k:'data:image/webp;base64,'+base64.b64encode(v).decode() for k,v in SP.items()}
+js='const ART={p:{'+','.join(f'{k}:"{ps[k]}"' for k in ORDER)+'},\n s:{'+','.join(f'{k}:"{ss[k]}"' for k in ORDER)+'},\n sp:{'+','.join(f'{k}:"{sps[k]}"' for k in ORDER)+'}};\nconst SPRM='+json.dumps(SPM,separators=(',',':'))+';\n'
 open('art/art_data.js','w').write(js)
-print('portraits KB',sum(len(v) for v in ps.values())//1024,'sheets KB',sum(len(v) for v in ss.values())//1024,'full KB',sum(len(v) for v in fs.values())//1024,'total KB',len(js)//1024)
+print('portraits KB',sum(len(v) for v in ps.values())//1024,'sheets KB',sum(len(v) for v in ss.values())//1024,'sprites KB',sum(len(v) for v in sps.values())//1024,'total KB',len(js)//1024)
