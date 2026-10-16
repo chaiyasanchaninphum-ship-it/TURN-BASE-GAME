@@ -372,6 +372,7 @@ textarea{font-family:var(--f-num);font-size:11px;min-height:80px;resize:vertical
 .ranks.stage .unit.dash{transform:translate(var(--tx,0),var(--ty,0))!important;transition:transform .2s cubic-bezier(.25,.85,.3,1);z-index:40!important}
 .ranks.stage .unit.dash .sbars,.ranks.stage .unit.dash .hpn,.ranks.stage .unit.dash .sts,.ranks.stage .unit.dash .intent{opacity:0}
 .ranks.stage .unit.dash .ring{opacity:.35}
+.ranks.stage .unit.ultcast .fig{filter:drop-shadow(0 0 10px #ffd76a) drop-shadow(0 0 3px #fff) brightness(1.2)}
 @media (max-height:700px){:root{--cw:68px}.rack{min-height:46px}.box{font-size:17px}.arena{min-height:150px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.rv{opacity:1}}
 </style>
@@ -1529,6 +1530,7 @@ async function useUlt(h){
   await ultCutIn(d);
   if(!C) return;
   sprHero(h,'ult');
+  if(stageOn()){const he=unitEl('h',h);if(he){const p=gpos(he);fxBurst(p.x,p.y,ELEMENTS[d.el].c,40,220,4);he.classList.add('ultcast')}if(!(U.dmgAll||U.dmgP)){await wait(760);if(!C) return}}
   const alive=aliveHeroes(),foes=C.enemies.filter(e=>!e.dead);
   C.ub=C.ub||{ch:0,m:0,x:1,atkCh:0};C.ultUsed=true;RUN.ults=(RUN.ults||0)+1;
   if(U.blk) addBlock(h,U.blk);
@@ -1547,6 +1549,7 @@ async function useUlt(h){
   if(U.ch) C.ub.ch+=U.ch;if(U.m) C.ub.m+=U.m;if(U.x) C.ub.x*=U.x;if(U.atkCh) C.ub.atkCh+=U.atkCh;
   if(U.xr){const r=+rnd(U.xr[0],U.xr[1]).toFixed(2);C.ub.x*=r;toast(`${d.name}: ×${r} Mult!`,'gold')}
   renderCombat();
+  if(stageOn()&&(U.dmgAll||U.dmgP)){const tg0=U.dmgAll?C.enemies.filter(e=>!e.dead):[C.enemies.find(e=>e.uid===C.target&&!e.dead)||C.enemies.find(e=>!e.dead)].filter(Boolean);await heroStrike(h,tg0,'ult');if(!C) return}
   if(U.dmgAll||U.dmgP){
     const cur=C.enemies.find(e=>e.uid===C.target&&!e.dead)||foes[0];
     const tg=U.dmgAll?foes:(cur?[cur]:[]),col=ELEMENTS[d.el].c;
@@ -1638,7 +1641,7 @@ async function resolveCheck(h){
   if(Math.random()<chance){
     const k=pick(Object.keys(VIRTUES)),V=VIRTUES[k];h.vir=k;h.aff=null;h.stress=0;h.ult=100;h.hp=Math.min(h.maxHp,h.hp+Math.round(h.maxHp*.3));
     SFX.play('virtue');
-    await cutScene('virtue',`<div class="cut-k" style="color:#3a2400">คุณธรรมตื่นขึ้น</div><div class="cut-art fr-UR">${heroSVG(d)}</div><div class="cut-t" style="color:#fff6d8">「${esc(d.ult)}!」</div><div class="cut-t" style="color:#ffd76a;font-size:26px">${esc(V.n)}</div><div class="cut-d" style="color:#2b1a00;font-weight:700">${esc(V.d)} · ฟื้นฟู HP 30% · ความเครียดเป็น 0</div>`,2600);
+    await cutScene('virtue',`<div class="cut-k" style="color:#3a2400">คุณธรรมตื่นขึ้น</div><div class="cut-art fr-UR">${heroSVG(d)}</div><div class="cut-t" style="color:#fff6d8">「${esc(d.ult)}!」</div><div class="cut-t" style="color:#ffd76a;font-size:26px">${esc(V.n)}</div><div class="cut-d" style="color:#2b1a00;font-weight:700">${esc(V.d)} · ฟื้นฟู HP 30% · ความเครียดเป็น 0</div>`,2600);sprHero(h,'ult');
   }else{
     const k=pick(Object.keys(AFFLICTIONS)),F=AFFLICTIONS[k];h.aff=k;h.stress=70;
     SFX.play('afflict');shakeGame();
@@ -1743,8 +1746,9 @@ async function playCard(cuid){
   if(o) addUlt(o,12);if(s.uc) aliveHeroes().forEach(h=>addUlt(h,s.uc));
   (s.ex||s.t==='pow'?C.exhaust:C.playedPile).push(inst);
   updatePreview();renderCombat();
-  sprHero(o,s.t==='atk'?'attack':'cast');
-  if(s.t==='atk'&&o){if(stageOn()){await heroStrike(o,targets.filter(e=>!e.dead));if(!C) return}else{const oe=unitEl('h',o);if(oe){oe.classList.add('act');setTimeout(()=>oe.classList.remove('act'),260)}}}
+  const bigMove=s.r==='r'||!!s.frb;
+  sprHero(o,s.t==='atk'?(bigMove?'skill':'attack'):(bigMove?'skill':'cast'));
+  if(s.t==='atk'&&o){if(stageOn()){await heroStrike(o,targets.filter(e=>!e.dead),bigMove?'skill':'attack');if(!C) return}else{const oe=unitEl('h',o);if(oe){oe.classList.add('act');setTimeout(()=>oe.classList.remove('act'),260)}}}
   await processResolves();
   if(checkDefeat()) return;
   C.busy=false;renderCombat();
@@ -1826,6 +1830,10 @@ async function release(){
 async function dealRelease(res,primary){
   if(!C) return;
   const P=C.played,atks=P.filter(p=>p.s.t==='atk'),total=res.total;
+  if(stageOn()&&atks.length&&(['royal','grand','four','full','flush','straight'].includes(res.hand)||total>=.6*C.enemies.reduce((a,e)=>a+(e.dead?0:e.hp),0))){
+    const top=atks.slice().sort((a,b)=>(b.given||0)-(a.given||0))[0],ow=top.owner&&!top.owner.dead?top.owner:null,t=C.enemies.find(e=>e.uid===top.tgt&&!e.dead)||primary;
+    if(ow&&t){await heroStrike(ow,[t],'skill');if(!C) return}
+  }
   const plan=[];
   if(!atks.length){if(primary) plan.push({e:primary,d:total,carry:1,el:P[0]?P[0].el:'void'})}
   else{
@@ -1842,14 +1850,14 @@ async function dealRelease(res,primary){
     let e=hit.e,d=hit.d;
     while(e&&d>0.5){
       const el=unitEl('e',e);const p=el?gpos(el):from,col=ELEMENTS[hit.el].c;
-      fxSlash(from.x,from.y+20,p.x,p.y,col);await wait(90);
+      fxSlash(from.x,from.y+20,p.x,p.y,col);await wait(90);if(!C) return;
       const before=e.hp;const over=dealEnemy(e,d);const dealt=before-e.hp;
       fxBurst(p.x,p.y,col,dealt>e.maxHp*.5?30:14,dealt>e.maxHp*.5?260:170);
       fxFloat(p.x,p.y-10,fmtS(Math.round(d*(e.st.vu>0?1.5:1))),'#ffe0a0',d>=1e4?26:20);
       SFX.play(d>=1e4?'big':'hit');if(el){el.classList.remove('hitk');void el.offsetWidth;el.classList.add('hitk')}
       if(e.dead){fxFloat(p.x,p.y+16,'สังหาร!','#ff3d3d',16);RUN.kills=(RUN.kills||0)+1;META.stats.kills++}
       renderRanks();
-      await wait(160);
+      await wait(160);if(!C) return;
       if(!hit.carry) break;
       d=over;if(d<=0.5) break;e=C.enemies.find(x=>!x.dead&&!x.p2pend&&enemyRank(x)>enemyRank(e))||C.enemies.find(x=>!x.dead&&!x.p2pend);
     }
@@ -1912,6 +1920,7 @@ function checkDefeat(){
 async function onVictory(){
   if(C.over) return;C.over=true;C.busy=true;
   SFX.play('win');setFlame(0);
+  if(stageOn()){aliveHeroes().forEach(h=>sprHero(h,'ult'));await wait(820);if(!C) return}
   aliveHeroes().forEach(h=>{h.vir=null});
   RUN.heroes.forEach(h=>{delete h.block;delete h.st;delete h.taunt;delete h.moves});
   await cutScene('virtue',`<div class="cut-k" style="color:#3a2400">ชัยชนะ</div><div class="cut-t" style="color:#fff6d8">${C.kind==='boss'?'บอสล่มสลาย!':C.kind==='elite'?'ชั้นยอดถูกโค่น!':'ผ่านพ้น'}</div>`,1100);
@@ -1986,7 +1995,7 @@ function unitHTML(u,side,i,o={}){
 /* ---------- hero sprites ---------- */
 // rows of each 8x5 sheet; one shared ticker sets background-position on every visible .spr element
 const ANIM={idle:{row:0,fps:7,loop:1},attack:{row:1,fps:14},hit:{row:2,fps:16},ult:{row:3,fps:11},death:{row:4,fps:10,hold:1},
-  cast:{row:3,fps:14,frames:[0,1,2,2,1,0]}};
+  cast:{row:3,fps:14,frames:[0,1,2,2,1,0]},skill:{row:3,fps:14}};
 const SPR_ST={};
 const sprOn=id=>paintedOn()&&!!(ART.sp&&ART.sp[id]&&SPRM[id]);
 function sprPlay(key,a){const st=SPR_ST[key];if(st&&st.a==='death'&&a!=='reset') return;SPR_ST[key]=a==='reset'?{a:'idle',t0:performance.now()-Math.random()*900}:{a,t0:performance.now()}}
@@ -2020,12 +2029,13 @@ async function dashIn(el,toEls,dir){
   await wait(200);return true;
 }
 async function dashOut(el){if(!el) return;el.classList.remove('dash');await wait(190)}
-async function heroStrike(h,targets){
+async function heroStrike(h,targets,anim='attack'){
   if(!stageOn()||!h) return;
+  sprHero(h,anim);
   const el=unitEl('h',h),tes=targets.map(e=>unitEl('e',e));
   if(!(await dashIn(el,tes,1))) return;
   tes.filter(Boolean).forEach(e=>{e.classList.remove('hitk');void e.offsetWidth;e.classList.add('hitk');const p=gpos(e);fxBurst(p.x,p.y-p.h*.1,ELEMENTS[HERO_MAP[h.id].el].c,12,150,2.5);fxSlash(p.x-22,p.y-28,p.x+18,p.y+12,'#fff')});
-  SFX.play('hit');await wait(230);
+  SFX.play(anim==='attack'?'hit':'big');if(anim!=='attack') shakeGame();await wait(anim==='attack'?230:anim==='skill'?430:560);
   await dashOut(el);
 }
 
