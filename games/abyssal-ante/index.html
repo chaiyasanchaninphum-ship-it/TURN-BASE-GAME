@@ -328,11 +328,11 @@ textarea{font-family:var(--f-num);font-size:11px;min-height:80px;resize:vertical
 .ranks.stage{display:block;position:relative;flex:1;min-height:140px;container-type:size}
 .ranks.stage .unit{position:absolute;bottom:2px;width:11%;margin-left:-5.5%;align-items:center;gap:1px;text-align:center;transition:transform .22s cubic-bezier(.2,.9,.3,1.25)}
 .ranks.stage .unit.act{transform:translateX(calc(var(--dir) * 24px)) translateY(-3px)}
-.ranks.stage .figwrap{position:relative;height:min(34cqh,92px);width:100%;display:flex;justify-content:center;align-items:flex-end}
+.ranks.stage .figwrap{position:relative;height:calc(var(--fh,min(37cqh,100px)) * var(--sc,1));width:100%;display:flex;justify-content:center;align-items:flex-end}
 .ranks.stage .unit.enemy{width:11%;margin-left:-5.5%}
-.ranks.stage .enemy .figwrap{height:min(27cqh,74px)}
-.ranks.stage .isboss .figwrap{height:min(38cqh,104px)}
-.ranks.stage .iselite .figwrap{height:min(32cqh,88px)}
+.ranks.stage .unit.enemy{--fh:min(29cqh,80px)}
+.ranks.stage .unit.isboss{--fh:min(42cqh,114px)}
+.ranks.stage .unit.iselite{--fh:min(34cqh,94px)}
 .arena.staged .ultbar{justify-content:flex-start;left:6px;right:auto;max-width:55%;padding:0}
 #scr-combat .cdetail.top{position:absolute;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));top:40px;bottom:auto;z-index:25}
 #scr-combat .cdetail.top .inner{max-width:none;width:100%}
@@ -368,6 +368,10 @@ textarea{font-family:var(--f-num);font-size:11px;min-height:80px;resize:vertical
   background:radial-gradient(60% 50% at 50% 92%,rgba(0,0,0,.6),transparent 70%),radial-gradient(90% 80% at 50% 30%,var(--pc,#3a2a48),#0b080e 75%)}
 .sprprev .spr{height:118%;margin-bottom:-6%}
 .sprbtns{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+/* attack dash: the unit slides to its target and back (transition from the base .unit rule) */
+.ranks.stage .unit.dash{transform:translate(var(--tx,0),var(--ty,0))!important;transition:transform .2s cubic-bezier(.25,.85,.3,1);z-index:40!important}
+.ranks.stage .unit.dash .sbars,.ranks.stage .unit.dash .hpn,.ranks.stage .unit.dash .sts,.ranks.stage .unit.dash .intent{opacity:0}
+.ranks.stage .unit.dash .ring{opacity:.35}
 @media (max-height:700px){:root{--cw:68px}.rack{min-height:46px}.box{font-size:17px}.arena{min-height:150px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}.rv{opacity:1}}
 </style>
@@ -1740,7 +1744,7 @@ async function playCard(cuid){
   (s.ex||s.t==='pow'?C.exhaust:C.playedPile).push(inst);
   updatePreview();renderCombat();
   sprHero(o,s.t==='atk'?'attack':'cast');
-  {const oe=s.t==='atk'&&o&&unitEl('h',o);if(oe){oe.classList.add('act');setTimeout(()=>oe.classList.remove('act'),260)}}
+  if(s.t==='atk'&&o){if(stageOn()){await heroStrike(o,targets.filter(e=>!e.dead));if(!C) return}else{const oe=unitEl('h',o);if(oe){oe.classList.add('act');setTimeout(()=>oe.classList.remove('act'),260)}}}
   await processResolves();
   if(checkDefeat()) return;
   C.busy=false;renderCombat();
@@ -1863,23 +1867,25 @@ function pickHeroTarget(rch){
 }
 async function enemyTurn(){
   for(const e of C.enemies.slice()){
-    if(C.over||e.dead) continue;
+    if(!C) return;if(C.over||e.dead) continue;
     if(!aliveHeroes().length) break;
     const el=unitEl('e',e);
     e.block=0;
     if(e.st.bl>0){const before=e.hp;dealEnemy(e,e.st.bl);floatAt(el,'🩸-'+Math.round(before-e.hp),'#ff6b80',14);e.st.bl--;if(e.p2pend){await checkPhase();continue}if(e.dead){C.enemies=C.enemies.filter(x=>!x.dead);renderCombat();if(!C.enemies.length){await onVictory();return}continue}}
     if(e.st.stun>0){e.st.stun=0;floatAt(el,'💫 สตัน','#ffe066',15);await wait(350);chooseIntent(e);continue}
     if(el){el.classList.add('act')}
-    const it=e.intent;await wait(260);
+    const it=e.intent;await wait(260);if(!C) return;
     switch(it.k){
       case 'atk':{
         const tgt=pickHeroTarget(it.rch);const hits=it.h||1;
+        const dashing=stageOn()&&tgt?await dashIn(el,[unitEl('h',tgt)],-1):false;if(!C) return;
         for(let k=0;k<hits&&tgt&&!tgt.dead;k++){
           let d=enemyDmg(e,it.d);const crit=Math.random()<.1;if(crit) d=Math.round(d*1.5);
           const te=unitEl('h',tgt);if(el&&te){const a=gpos(el),b=gpos(te);fxSlash(a.x,a.y,b.x,b.y,'#ff3d3d')}
           SFX.play('enemy');damageHero(tgt,d,{crit});if(crit){floatAt(te,'คริติคอล!','#ffb04a',14);addStress(tgt,10)}
-          renderRanks();await wait(200);
+          if(!dashing) renderRanks();await wait(200);if(!C) return;
         }
+        if(dashing){await dashOut(el);if(!C) return;renderRanks()}
         log(`${e.name} โจมตี ${tgt?HERO_MAP[tgt.id].name:''}`);break}
       case 'stress':{const ts=it.all?aliveHeroes():[pick(aliveHeroes())];ts.forEach(h=>addStress(h,it.n));SFX.play('stress');log(`${e.name} กระซิบความบ้าคลั่ง`);break}
       case 'debuff':{const ts=it.all?aliveHeroes():[pickHeroTarget(it.rch)];ts.forEach(h=>{if(!h) return;if(it.bl) h.st.bl+=it.bl;if(it.wk) h.st.wk+=it.wk;if(it.vu) h.st.vu+=it.vu;floatAt(unitEl('h',h),'☠','#c38bff',16)});log(`${e.name} สาปแช่ง`);break}
@@ -2003,9 +2009,29 @@ TICK.push(()=>{
   }
 });
 
+/* ---------- attack dash ---------- */
+async function dashIn(el,toEls,dir){
+  toEls=toEls.filter(Boolean);if(!el||!toEls.length||REDUCED) return false;
+  const a=el.getBoundingClientRect(),rs=toEls.map(e=>e.getBoundingClientRect());
+  const cx=rs.reduce((t,r)=>t+r.left+r.width/2,0)/rs.length,by=rs.reduce((t,r)=>t+r.bottom,0)/rs.length;
+  el.style.setProperty('--tx',(cx-(a.left+a.width/2)-dir*Math.max(30,a.width*.9))+'px');
+  el.style.setProperty('--ty',(by-a.bottom)+'px');
+  el.classList.add('dash');SFX.play('step');
+  await wait(200);return true;
+}
+async function dashOut(el){if(!el) return;el.classList.remove('dash');await wait(190)}
+async function heroStrike(h,targets){
+  if(!stageOn()||!h) return;
+  const el=unitEl('h',h),tes=targets.map(e=>unitEl('e',e));
+  if(!(await dashIn(el,tes,1))) return;
+  tes.filter(Boolean).forEach(e=>{e.classList.remove('hitk');void e.offsetWidth;e.classList.add('hitk');const p=gpos(e);fxBurst(p.x,p.y-p.h*.1,ELEMENTS[HERO_MAP[h.id].el].c,12,150,2.5);fxSlash(p.x-22,p.y-28,p.x+18,p.y+12,'#fff')});
+  SFX.play('hit');await wait(230);
+  await dashOut(el);
+}
+
 /* ---------- battle stage ---------- */
 const stageOn=()=>META.stage!==false;
-const STAGE_X=[44,32.5,21,9.5],STAGE_XE=[56,68,80,92];
+const STAGE_X=[41,29.5,18,7.5],STAGE_XE=[59,70.5,82,92.5];
 const STAGES=[
   {wall:'#1d1428',glow:'#8a5ab8',floor:'#17111d',line:'rgba(170,130,210,.11)',fog:'rgba(150,120,190,.16)'},
   {wall:'#0e1a26',glow:'#5ab8d8',floor:'#0c141c',line:'rgba(120,200,240,.11)',fog:'rgba(120,190,230,.14)'},
@@ -2051,7 +2077,7 @@ function stageUnit(u,isH,rank,right,o){
   const cls=[u.dead?'dead':'',o.tgt?'tgt':'',o.reach?'reach':'',o.owner?'owner':'',isH&&!u.dead&&(u.ult||0)>=100?'ultok':'',isH&&u.aff?'aff':'',isH&&u.vir?'vir':'',isH&&!u.dead&&u.hp<=0?'ddoor':'',!isH?'enemy':'',!isH&&D.boss?'isboss':'',!isH&&D.elite?'iselite':''].join(' ');
   let tag='';if(isH){if(u.vir) tag=`<span class="tagv v">${VIRTUES[u.vir].n}</span>`;else if(u.aff) tag=`<span class="tagv a">${AFFLICTIONS[u.aff].n}</span>`;else if(!u.dead&&u.hp<=0) tag='<span class="tagv dd">ประตูมรณะ</span>'}
   const T=o.tag||'button';
-  return `<${T} class="unit su ${cls}" ${o.attrs||''} style="left:${x}%;z-index:${20-rank};--dir:${right?-1:1};--d:${ph.toFixed(2)}s" aria-label="${esc(isH?D.name:(u.name||D.n))}">
+  return `<${T} class="unit su ${cls}" ${o.attrs||''} style="left:${x}%;bottom:calc(2px + ${rank%2} * min(19cqh,52px));z-index:${(rank%2?10:20)-rank};--sc:${rank%2?.9:1};--dir:${right?-1:1};--d:${ph.toFixed(2)}s" aria-label="${esc(isH?D.name:(u.name||D.n))}">
     <div class="intent">${o.intent||''}</div>
     <div class="figwrap"><span class="ring"></span>${figHTML(u,isH,o.sk,right&&isH)}${u.block>0?`<span class="blk">${fmtS(u.block)}</span>`:''}${tag}<span class="srk">${rank+1}</span></div>
     <div class="sbars"><div class="bar hp"><i style="width:${hpP}%"></i></div>${isH?`<div class="bar st ${u.stress>=70?'hi':''}"><i style="width:${Math.min(100,u.stress)}%"></i></div><div class="bar ul"><i style="width:${Math.min(100,u.ult||0)}%"></i></div>`:''}</div>
