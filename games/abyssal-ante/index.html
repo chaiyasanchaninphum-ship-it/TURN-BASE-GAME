@@ -326,13 +326,13 @@ textarea{font-family:var(--f-num);font-size:11px;min-height:80px;resize:vertical
 .arena>.ranks,.arena>.alog,.arena>.played{position:relative;z-index:1}
 .arena::before,.arena::after{z-index:2}
 .ranks.stage{display:block;position:relative;flex:1;min-height:140px;container-type:size}
-.ranks.stage .unit{position:absolute;bottom:2px;width:10.5%;margin-left:-5.25%;align-items:center;gap:1px;text-align:center;transition:transform .22s cubic-bezier(.2,.9,.3,1.25)}
+.ranks.stage .unit{position:absolute;bottom:2px;width:11%;margin-left:-5.5%;align-items:center;gap:1px;text-align:center;transition:transform .22s cubic-bezier(.2,.9,.3,1.25)}
 .ranks.stage .unit.act{transform:translateX(calc(var(--dir) * 24px)) translateY(-3px)}
-.ranks.stage .figwrap{position:relative;height:52cqh;width:100%;display:flex;justify-content:center;align-items:flex-end}
-.ranks.stage .unit.enemy{width:11.5%;margin-left:-5.75%}
-.ranks.stage .enemy .figwrap{height:38cqh}
-.ranks.stage .isboss .figwrap{height:54cqh}
-.ranks.stage .iselite .figwrap{height:45cqh}
+.ranks.stage .figwrap{position:relative;height:min(34cqh,92px);width:100%;display:flex;justify-content:center;align-items:flex-end}
+.ranks.stage .unit.enemy{width:11%;margin-left:-5.5%}
+.ranks.stage .enemy .figwrap{height:min(27cqh,74px)}
+.ranks.stage .isboss .figwrap{height:min(38cqh,104px)}
+.ranks.stage .iselite .figwrap{height:min(32cqh,88px)}
 .arena.staged .ultbar{justify-content:flex-start;left:6px;right:auto;max-width:55%;padding:0}
 #scr-combat .cdetail.top{position:absolute;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));top:40px;bottom:auto;z-index:25}
 #scr-combat .cdetail.top .inner{max-width:none;width:100%}
@@ -2005,7 +2005,7 @@ TICK.push(()=>{
 
 /* ---------- battle stage ---------- */
 const stageOn=()=>META.stage!==false;
-const STAGE_X=[43,32.5,22,11.5],STAGE_XE=[58,70,82,93];
+const STAGE_X=[44,32.5,21,9.5],STAGE_XE=[56,68,80,92];
 const STAGES=[
   {wall:'#1d1428',glow:'#8a5ab8',floor:'#17111d',line:'rgba(170,130,210,.11)',fog:'rgba(150,120,190,.16)'},
   {wall:'#0e1a26',glow:'#5ab8d8',floor:'#0c141c',line:'rgba(120,200,240,.11)',fog:'rgba(120,190,230,.14)'},
